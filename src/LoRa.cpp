@@ -583,13 +583,27 @@ void LoRaClass::setOCP(uint8_t mA)
 byte LoRaClass::random()
 {
   uint8_t currMode = readRegister(REG_OP_MODE);
-  uint8_t retVal = 0;
+  uint8_t retVal = 0, bits=7;
   
   while(isTransmitting());
 
   //We need to be listening to radio-traffic in order to generate random numbers
   if(currMode != (MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS)){ this->receive(); delay(1); }
   retVal = readRegister(REG_RSSI_WIDEBAND);
+
+  while(bits--) {
+    retVal<<=1;
+    while(1){
+      // implement a basic von Neumann Extractor
+      uint8_t a=(readRegister(REG_RSSI_WIDEBAND) & 1);
+      if(a != (readRegister(REG_RSSI_WIDEBAND) & 1)){
+        // put random, whitened bit in n
+        retVal |= a;
+        break;
+      }
+    }
+  }
+
   //Put the radio in the same mode as it was
   if(currMode != (MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS)) writeRegister(REG_OP_MODE, currMode);
 
